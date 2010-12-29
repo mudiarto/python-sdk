@@ -37,6 +37,7 @@ import cgi
 import hashlib
 import time
 import urllib
+import urllib2
 
 # Find a JSON parser
 try:
@@ -99,6 +100,11 @@ class GraphAPI(object):
     def get_connections(self, id, connection_name, **args):
         """Fetchs the connections for given object."""
         return self.request(id + "/" + connection_name, args)
+
+    def get_connections_raw(self, id, connection_name, **args):
+        """Fetchs the connections for given object."""
+        return self.request_raw(id + "/" + connection_name, args)
+
 
     def put_object(self, parent_object, connection_name, **data):
         """Writes the given object to the graph, connected to the given parent.
@@ -178,6 +184,27 @@ class GraphAPI(object):
             raise GraphAPIError(response["error"]["type"],
                                 response["error"]["message"])
         return response
+
+    def request_raw(self, path, args=None, post_args=None):
+        """Fetches the given path in the Graph API.
+
+        We translate args to a valid query string. If post_args is given,
+        we send a POST request to the given path with the given arguments.
+        """
+        if not args: args = {}
+        if self.access_token:
+            if post_args is not None:
+                post_args["access_token"] = self.access_token
+            else:
+                args["access_token"] = self.access_token
+        post_data = None if post_args is None else urllib.urlencode(post_args)
+
+        # kusno NOTE: I'm using urllib2 instead of urllib
+        # since it seems the read() is more reliable
+        file = urllib2.urlopen("https://graph.facebook.com/" + path + "?" +
+                              urllib.urlencode(args), post_data)
+        return file
+
 
 
 class GraphAPIError(Exception):
